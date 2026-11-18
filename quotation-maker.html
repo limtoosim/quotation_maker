@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quotation Maker</title>
+<style>
+  :root {
+    --ink: #1a2332;
+    --muted: #6b7686;
+    --accent: #2563eb;
+    --line: #e3e8ef;
+    --bg: #f4f6fa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+  .wrap { width: 100%; max-width: 820px; }
+
+  /* ============ Editor panel ============ */
+  .editor {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(20,30,50,.06);
+  }
+  .editor h1 { font-size: 20px; margin-bottom: 4px; }
+  .editor .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+
+  .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .meta-grid .full { grid-column: 1 / -1; }
+  label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+  input, textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--ink);
+    background: #fff;
+  }
+  input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 54px; }
+
+  /* Items table */
+  .items-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 8px 0 10px;
+  }
+  .items-head h2 { font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--muted); padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  td input { border-color: transparent; background: transparent; }
+  td input:hover, td input:focus { border-color: var(--line); background: #fff; }
+  .col-desc { width: 42%; }
+  .col-qty, .col-price { width: 16%; }
+  .col-amt { width: 16%; text-align: right; font-variant-numeric: tabular-nums; padding-right: 8px; }
+  .col-del { width: 36px; text-align: center; }
+  .del-btn {
+    border: none; background: none; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 4px; border-radius: 6px; line-height: 1;
+  }
+  .del-btn:hover { color: #dc2626; background: #fef2f2; }
+  .amt { text-align: right; font-variant-numeric: tabular-nums; padding-right: 8px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: none; border-radius: 8px; padding: 9px 16px;
+    font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-ghost { background: #eef2ff; color: var(--accent); }
+  .btn-ghost:hover { background: #e0e7ff; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+
+  .totals-box { margin: 20px 0 0 auto; width: 260px; font-size: 14px; }
+  .totals-box .row {
+    display: flex; justify-content: space-between; padding: 5px 0;
+    color: var(--muted);
+  }
+  .totals-box .row.grand {
+    border-top: 2px solid var(--ink); margin-top: 6px; padding-top: 10px;
+    color: var(--ink); font-size: 17px; font-weight: 700;
+  }
+  .tax-row input { width: 70px; padding: 3px 6px; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; text-align: right; }
+
+  .actions { display: flex; gap: 10px; margin-top: 24px; flex-wrap: wrap; }
+
+  /* ============ Quote preview ============ */
+  .quote {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-top: 28px;
+    padding: 40px 44px;
+    box-shadow: 0 1px 3px rgba(20,30,50,.06);
+  }
+  .q-top { display: flex; justify-content: space-between; gap: 24px; }
+  .q-biz-name { font-size: 22px; font-weight: 700; }
+  .q-biz-meta { color: var(--muted); font-size: 13px; white-space: pre-line; margin-top: 6px; }
+  .q-title { font-size: 30px; font-weight: 800; letter-spacing: .06em; color: var(--accent); }
+  .q-num, .q-date { color: var(--muted); font-size: 13px; text-align: right; margin-top: 4px; }
+
+  .q-parties { display: flex; gap: 40px; margin: 32px 0 24px; font-size: 14px; }
+  .q-parties .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 4px; }
+  .q-parties .val { white-space: pre-line; }
+
+  .q-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .q-table th {
+    text-align: left; padding: 9px 10px; background: var(--ink); color: #fff;
+    font-size: 11px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .q-table th:last-child, .q-table td:last-child { text-align: right; }
+  .q-table td { padding: 10px; border-bottom: 1px solid var(--line); }
+  .q-table td.num { font-variant-numeric: tabular-nums; }
+  .q-items td:first-child { width: 30px; color: var(--muted); }
+
+  .q-totals { margin-left: auto; margin-top: 16px; width: 260px; font-size: 14px; }
+  .q-totals .row { display: flex; justify-content: space-between; padding: 5px 0; color: var(--muted); }
+  .q-totals .row.grand {
+    border-top: 2px solid var(--ink); margin-top: 6px; padding-top: 10px;
+    color: var(--ink); font-size: 18px; font-weight: 700;
+  }
+
+  .q-notes { margin-top: 32px; font-size: 13px; color: var(--muted); white-space: pre-line; }
+  .q-notes:empty { display: none; }
+  .q-footer { margin-top: 40px; border-top: 1px solid var(--line); padding-top: 14px; font-size: 12px; color: var(--muted); text-align: center; }
+
+  .empty-hint { text-align: center; color: var(--muted); font-size: 13px; padding: 18px 0; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .editor { display: none; }
+    .quote { border: none; box-shadow: none; border-radius: 0; margin: 0; padding: 20px; }
+  }
+  @media (max-width: 560px) {
+    .meta-grid { grid-template-columns: 1fr; }
+    .quote { padding: 24px 20px; }
+    .q-parties { flex-direction: column; gap: 16px; }
+    .totals-box, .q-totals { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ EDITOR ============ -->
+  <div class="editor" id="editor">
+    <h1>Quotation Maker</h1>
+    <p class="sub">Fill in your details and items — the quote below updates live. Use Print / Save as PDF to share it.</p>
+
+    <div class="meta-grid">
+      <div>
+        <label for="bizName">Business name</label>
+        <input id="bizName" placeholder="Your Company Ltd" oninput="render()">
+      </div>
+      <div>
+        <label for="quoteNum">Quote number</label>
+        <input id="quoteNum" placeholder="Q-2026-001" oninput="render()">
+      </div>
+      <div class="full">
+        <label for="bizMeta">Contact details (address, phone, email)</label>
+        <textarea id="bizMeta" placeholder="123 Main Street&#10;+1 555 0100&#10;hello@yourcompany.com" oninput="render()"></textarea>
+      </div>
+      <div>
+        <label for="clientName">Customer</label>
+        <input id="clientName" placeholder="Customer name" oninput="render()">
+      </div>
+      <div>
+        <label for="clientInfo">Customer details</label>
+        <textarea id="clientInfo" placeholder="Address, email, phone…" oninput="render()"></textarea>
+      </div>
+      <div>
+        <label for="quoteDate">Date</label>
+        <input id="quoteDate" type="date" oninput="render()">
+      </div>
+      <div>
+        <label for="validDays">Valid for (days)</label>
+        <input id="validDays" type="number" value="30" min="0" oninput="render()">
+      </div>
+    </div>
+
+    <div class="items-head">
+      <h2>Items</h2>
+      <button class="btn btn-ghost" onclick="addItem()">+ Add item</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-desc">Description</th>
+          <th class="col-qty">Qty</th>
+          <th class="col-price">Unit price</th>
+          <th class="col-amt">Amount</th>
+          <th class="col-del"></th>
+        </tr>
+      </thead>
+      <tbody id="itemsBody"></tbody>
+    </table>
+
+    <div class="totals-box">
+      <div class="row tax-row">
+        <span>Tax / GST / VAT %</span>
+        <input id="taxRate" type="number" value="0" min="0" step="0.1" oninput="render()">
+      </div>
+      <div class="row"><span>Subtotal</span><span id="tSub"></span></div>
+      <div class="row"><span>Tax</span><span id="tTax"></span></div>
+      <div class="row grand"><span>Total</span><span id="tTotal"></span></div>
+    </div>
+
+    <div style="margin-top: 20px;">
+      <label for="notes">Notes / terms</label>
+      <textarea id="notes" placeholder="Payment terms, delivery time, anything else…" oninput="render()"></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="window.print()">Print / Save as PDF</button>
+      <button class="btn btn-ghost" onclick="copySummary()">Copy as text</button>
+      <button class="btn btn-ghost" onclick="saveDraft()">Save draft</button>
+      <button class="btn btn-ghost" onclick="loadDraft()">Load draft</button>
+      <button class="btn btn-ghost" onclick="clearAll()">Clear all</button>
+    </div>
+  </div>
+
+  <!-- ============ QUOTE PREVIEW ============ -->
+  <div class="quote" id="quote">
+    <div class="q-top">
+      <div>
+        <div class="q-biz-name" id="qBizName"></div>
+        <div class="q-biz-meta" id="qBizMeta"></div>
+      </div>
+      <div>
+        <div class="q-title">QUOTATION</div>
+        <div class="q-num" id="qNum"></div>
+        <div class="q-date" id="qDate"></div>
+        <div class="q-date" id="qValid"></div>
+      </div>
+    </div>
+
+    <div class="q-parties">
+      <div>
+        <div class="lbl">Prepared for</div>
+        <div class="val" id="qClient"></div>
+      </div>
+    </div>
+
+    <table class="q-table q-items">
+      <thead>
+        <tr><th>#</th><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit price</th><th>Amount</th></tr>
+      </thead>
+      <tbody id="qItems"></tbody>
+    </table>
+
+    <div class="q-totals">
+      <div class="row"><span>Subtotal</span><span id="qSub"></span></div>
+      <div class="row" id="qTaxRow"><span id="qTaxLbl">Tax</span><span id="qTax"></span></div>
+      <div class="row grand"><span>Total</span><span id="qTotal"></span></div>
+    </div>
+
+    <div class="q-notes" id="qNotes"></div>
+    <div class="q-footer">This quotation is valid for the period stated above. Prices subject to change after expiry.</div>
+  </div>
+</div>
+
+<script>
+const CUR = "$";
+const money = n => CUR + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const val = id => document.getElementById(id).value.trim();
+const num = id => parseFloat(document.getElementById(id).value) || 0;
+
+let items = [{ desc: "", qty: 1, price: 0 }];
+let seq = 0;
+
+function addItem() {
+  items.push({ desc: "", qty: 1, price: 0 });
+  renderItems();
+}
+
+function removeItem(i) {
+  items.splice(i, 1);
+  if (!items.length) items.push({ desc: "", qty: 1, price: 0 });
+  renderItems();
+}
+
+function renderItems() {
+  const body = document.getElementById("itemsBody");
+  body.innerHTML = "";
+  items.forEach((it, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="col-desc"><input placeholder="Service or item description" value="${esc(it.desc)}"
+        oninput="items[${i}].desc=this.value; render()"></td>
+      <td class="col-qty"><input type="number" min="0" step="any" value="${it.qty}"
+        oninput="items[${i}].qty=parseFloat(this.value)||0; render()"></td>
+      <td class="col-price"><input type="number" min="0" step="any" value="${it.price}"
+        oninput="items[${i}].price=parseFloat(this.value)||0; render()"></td>
+      <td class="amt" id="amt-${i}"></td>
+      <td class="col-del"><button class="del-btn" title="Remove" onclick="removeItem(${i})">✕</button></td>`;
+    body.appendChild(tr);
+  });
+  render();
+}
+
+function totals() {
+  const sub = items.reduce((s, it) => s + (it.qty || 0) * (it.price || 0), 0);
+  const tax = sub * (num("taxRate") / 100);
+  return { sub, tax, total: sub + tax };
+}
+
+function render() {
+  const t = totals();
+
+  items.forEach((it, i) => {
+    const el = document.getElementById("amt-" + i);
+    if (el) el.textContent = money(it.qty * it.price);
+  });
+
+  document.getElementById("tSub").textContent = money(t.sub);
+  document.getElementById("tTax").textContent = money(t.tax);
+  document.getElementById("tTotal").textContent = money(t.total);
+
+  document.getElementById("qBizName").textContent = val("bizName") || "Your Business Name";
+  document.getElementById("qBizMeta").textContent = val("bizMeta");
+  document.getElementById("qNum").textContent = val("quoteNum") ? "No. " + val("quoteNum") : "";
+
+  const d = document.getElementById("quoteDate").value
+    ? new Date(document.getElementById("quoteDate").value + "T00:00:00")
+    : new Date();
+  document.getElementById("qDate").textContent = "Date: " + d.toLocaleDateString();
+
+  const vd = num("validDays");
+  if (vd > 0) {
+    const exp = new Date(d); exp.setDate(exp.getDate() + vd);
+    document.getElementById("qValid").textContent = "Valid until: " + exp.toLocaleDateString();
+  } else document.getElementById("qValid").textContent = "";
+
+  const cn = val("clientName");
+  const ci = val("clientInfo");
+  document.getElementById("qClient").textContent = cn ? (ci ? cn + "\n" + ci : cn)
+    : (ci || "—");
+
+  const qb = document.getElementById("qItems");
+  qb.innerHTML = "";
+  const shown = items.filter(it => it.desc || it.qty * it.price > 0);
+  if (!shown.length) {
+    qb.innerHTML = `<tr><td colspan="5" class="empty-hint">No items yet — add some above.</td></tr>`;
+  } else {
+    shown.forEach((it, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${i + 1}</td><td>${esc(it.desc) || "&nbsp;"}</td>
+        <td class="num" style="text-align:right">${fmtQty(it.qty)}</td>
+        <td class="num" style="text-align:right">${money(it.price)}</td>
+        <td class="num">${money(it.qty * it.price)}</td>`;
+      qb.appendChild(tr);
+    });
+  }
+
+  document.getElementById("qSub").textContent = money(t.sub);
+  const rate = num("taxRate");
+  document.getElementById("qTaxLbl").textContent = rate ? `Tax (${rate}%)` : "Tax";
+  document.getElementById("qTaxRow").style.display = rate ? "" : "none";
+  document.getElementById("qTotal").textContent = money(t.total);
+  document.getElementById("qNotes").textContent = val("notes");
+}
+
+function fmtQty(q) {
+  return Number.isInteger(q) ? String(q) : String(q);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+}
+
+function copySummary() {
+  const t = totals();
+  const lines = [];
+  if (val("bizName")) lines.push(val("bizName"));
+  lines.push("QUOTATION" + (val("quoteNum") ? " " + val("quoteNum") : ""));
+  lines.push("");
+  if (val("clientName")) lines.push("For: " + val("clientName"));
+  lines.push("");
+  items.filter(it => it.desc || it.qty * it.price > 0).forEach(it =>
+    lines.push(`- ${it.desc || "(item)"}  x${fmtQty(it.qty)} @ ${money(it.price)} = ${money(it.qty * it.price)}`));
+  lines.push("");
+  lines.push(`Subtotal: ${money(t.sub)}`);
+  if (num("taxRate")) lines.push(`Tax (${num("taxRate")}%): ${money(t.tax)}`);
+  lines.push(`Total: ${money(t.total)}`);
+  const notes = val("notes");
+  if (notes) lines.push("", "Notes: " + notes);
+  navigator.clipboard.writeText(lines.join("\n"))
+    .then(() => flash("Copied to clipboard"))
+    .catch(() => flash("Copy failed — select the quote text manually"));
+}
+
+function saveDraft() {
+  const data = {
+    items,
+    bizName: val("bizName"), bizMeta: val("bizMeta"), quoteNum: val("quoteNum"),
+    clientName: val("clientName"), clientInfo: val("clientInfo"),
+    date: document.getElementById("quoteDate").value,
+    validDays: document.getElementById("validDays").value,
+    taxRate: document.getElementById("taxRate").value,
+    notes: val("notes")
+  };
+  localStorage.setItem("quoteDraft", JSON.stringify(data));
+  flash("Draft saved in this browser");
+}
+
+function loadDraft() {
+  const raw = localStorage.getItem("quoteDraft");
+  if (!raw) return flash("No saved draft found");
+  const d = JSON.parse(raw);
+  set("bizName", d.bizName); set("bizMeta", d.bizMeta); set("quoteNum", d.quoteNum);
+  set("clientName", d.clientName); set("clientInfo", d.clientInfo);
+  set("quoteDate", d.date); set("validDays", d.validDays);
+  set("taxRate", d.taxRate); set("notes", d.notes);
+  if (Array.isArray(d.items) && d.items.length) items = d.items;
+  renderItems();
+  flash("Draft loaded");
+}
+
+function set(id, v) { if (v !== undefined && v !== null) document.getElementById(id).value = v; }
+
+function clearAll() {
+  if (!confirm("Clear everything and start a new quote?")) return;
+  ["bizName","bizMeta","quoteNum","clientName","clientInfo","notes"].forEach(id => set(id, ""));
+  set("quoteDate", ""); set("validDays", "30"); set("taxRate", "0");
+  items = [{ desc: "", qty: 1, price: 0 }];
+  renderItems();
+}
+
+function flash(msg) {
+  const b = document.createElement("div");
+  b.textContent = msg;
+  b.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;z-index:99;box-shadow:0 4px 12px rgba(0,0,0,.2)";
+  document.body.appendChild(b);
+  setTimeout(() => b.remove(), 2200);
+}
+
+document.getElementById("quoteDate").value = new Date().toISOString().slice(0, 10);
+renderItems();
+</script>
+</body>
+</html>
